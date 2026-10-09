@@ -1,0 +1,41 @@
+name: Build i2c-tools for Android
+
+on:
+  workflow_dispatch:  # 允许手动触发
+  push:
+    branches: [ main ] # 推送到 main 分支时自动触发
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Android NDK
+      uses: android-actions/setup-android@v3
+      with:
+        ndk-version: '21.4.7075529' # NDK r21e
+
+    - name: Download and build i2c-tools
+      run: |
+        # 下载源码
+        wget https://mirrors.edge.kernel.org/pub/software/utils/i2c-tools/i2c-tools-4.3.tar.gz
+        tar -xzf i2c-tools-4.3.tar.gz
+        cd i2c-tools-4.3
+
+        # 修改 Makefile
+        sed -i 's/^CC\s*=.*/CC = armv7a-linux-androideabi28-clang/' Makefile
+        sed -i 's/^AR\s*=.*/AR = arm-linux-androideabi-ar/' Makefile
+        sed -i 's/^STRIP\s*=.*/STRIP = arm-linux-androideabi-strip/' Makefile
+        sed -i 's/^USE_STATIC_LIB\s*=.*/USE_STATIC_LIB = 1/' Makefile
+
+        # 编译
+        make
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: i2c-tools-armv7a
+        path: i2c-tools-4.3/tools/i2c*
